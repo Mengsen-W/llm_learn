@@ -75,11 +75,11 @@ class MyDataCollator:
         
 if __name__ == '__main__':
     
-    tokenizer = AutoTokenizer.from_pretrained('/home/user/wyf/chinese-roberta-wwm-ext')
-    processor = AutoProcessor.from_pretrained('/home/user/wyf/train_siglip_from_scratch/vit-base-patch16-224')
+    tokenizer = AutoTokenizer.from_pretrained('chinese-roberta-wwm-ext')
+    processor = AutoProcessor.from_pretrained('train_siglip_from_scratch/vit-base-patch16-224')
     
-    dataset = SiglipDataset(text_data_path='/home/user/wyf/train_siglip_from_scratch/MUGE/all_texts.jsonl',
-                            image_data_path='/home/user/wyf/train_siglip_from_scratch/MUGE/all_imgs.tsv',
+    dataset = SiglipDataset(text_data_path='train_siglip_from_scratch/MUGE/all_texts.jsonl',
+                            image_data_path='train_siglip_from_scratch/MUGE/all_imgs.tsv',
                             tokenizer=tokenizer,
                             processor=processor,
                             max_seq_length=64)

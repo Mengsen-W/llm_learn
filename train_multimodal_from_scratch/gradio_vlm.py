@@ -6,15 +6,15 @@ from train import VLMConfig, VLM
 import torch
 from torch.nn import functional as F
 device = "cuda:1"
-processor = AutoProcessor.from_pretrained("/home/user/wyf/siglip-base-patch16-224")
+processor = AutoProcessor.from_pretrained("siglip-base-patch16-224")
 tokenizer = AutoTokenizer.from_pretrained('/home/user/Downloads/Qwen2.5-0.5B-Instruct')
 AutoConfig.register("vlm_model", VLMConfig)
 AutoModelForCausalLM.register(VLMConfig, VLM)
 
-pretrain_model = AutoModelForCausalLM.from_pretrained('/home/user/wyf/train_multimodal_from_scratch/save/pretrain')
+pretrain_model = AutoModelForCausalLM.from_pretrained('train_multimodal_from_scratch/save/pretrain')
 pretrain_model.to(device)
 
-sft_model = AutoModelForCausalLM.from_pretrained('/home/user/wyf/train_multimodal_from_scratch/save/sft')
+sft_model = AutoModelForCausalLM.from_pretrained('train_multimodal_from_scratch/save/sft')
 sft_model.to(device)
 
 pretrain_model.eval()

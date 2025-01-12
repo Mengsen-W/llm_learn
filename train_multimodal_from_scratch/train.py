@@ -154,7 +154,7 @@ class MyDataCollator:
         
         
 if __name__ == '__main__':
-    config = VLMConfig(vision_model_path='/home/user/wyf/siglip-base-patch16-224', image_pad_num=49)
+    config = VLMConfig(vision_model_path='siglip-base-patch16-224', image_pad_num=49)
     model = VLM(config).cuda()
     print(model)
     print(f'模型参数量为：{sum(p.numel() for p in model.parameters() if p.requires_grad)}')

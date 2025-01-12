@@ -252,7 +252,7 @@ def parse_pdf(
 
 
 result = parse_pdf(
-    pdf_path="/home/user/wyf/test.pdf",
+    pdf_path="test.pdf",
     output_dir="./output",
     verbose=True,
     gpt_worker=1,
