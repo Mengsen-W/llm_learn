@@ -4,7 +4,9 @@ from typing import List, Tuple, Optional, Dict
 import logging
 import cv2
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 import fitz
 import shapely.geometry as sg
 from shapely.geometry.base import BaseGeometry
@@ -18,7 +20,8 @@ import numpy as np
 import fitz
 import logging
 import os
-output_dir = 'output'
+
+output_dir = "output"
 os.makedirs(output_dir, exist_ok=True)
 from PIL import Image
 
@@ -26,15 +29,19 @@ from rapid_layout import RapidLayout, VisLayout
 
 layout_engine = RapidLayout(conf_thres=0.5, model_type="pp_layout_cdla")
 
-model = Qwen2VLForConditionalGeneration.from_pretrained("/home/user/Downloads/Qwen2-VL-7B-Instruct/",
-                                                        torch_dtype=torch.bfloat16,
-                                                        device_map="auto")
+model = Qwen2VLForConditionalGeneration.from_pretrained(
+    "/home/user/Downloads/Qwen2-VL-7B-Instruct/",
+    torch_dtype=torch.bfloat16,
+    device_map="auto",
+)
 
-min_pixels = 256*28*28
-max_pixels = 1280*28*28
-processor = AutoProcessor.from_pretrained("/home/user/Downloads/Qwen2-VL-7B-Instruct/", 
-                                          min_pixels=min_pixels, 
-                                          max_pixels=max_pixels)
+min_pixels = 256 * 28 * 28
+max_pixels = 1280 * 28 * 28
+processor = AutoProcessor.from_pretrained(
+    "/home/user/Downloads/Qwen2-VL-7B-Instruct/",
+    min_pixels=min_pixels,
+    max_pixels=max_pixels,
+)
 
 # This Default Prompt Using Chinese and could be changed to other languages.
 DEFAULT_PROMPT = """使用markdown语法，将图片中识别到的文字转换为markdown格式输出。你必须做到：
@@ -48,19 +55,22 @@ DEFAULT_RECT_PROMPT = """图片中用带颜色的矩形框和名称(%s)标注出
 DEFAULT_ROLE_PROMPT = """你是一个PDF文档解析器，使用markdown和latex语法输出图片的内容。
 """
 
-def _parse_pdf_to_images(pdf_path: str, output_dir: str = './output') -> List[Tuple[str, List[str]]]:
+
+def _parse_pdf_to_images(
+    pdf_path: str, output_dir: str = "./output"
+) -> List[Tuple[str, List[str]]]:
     image_infos = []
     pdf_document = fitz.open(pdf_path)
     for page_index, page in enumerate(pdf_document):
         rect_images = []
-        logging.info(f'parse page: {page_index}')
+        logging.info(f"parse page: {page_index}")
         # 保存页面为图片
         pix = page.get_pixmap(matrix=fitz.Matrix(4, 4))
-        pix = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
+        pix = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
         boxes, scores, class_names, elapse = layout_engine(pix)
         for index, (class_name, box) in enumerate(zip(class_names, boxes)):
-            if class_name == 'figure' or class_name == 'table':
-                name = f'{page_index}_{index}.png'
+            if class_name == "figure" or class_name == "table":
+                name = f"{page_index}_{index}.png"
                 sub_pix = pix.crop(box)
                 sub_pix.save(os.path.join(output_dir, name))
                 rect_images.append(name)
@@ -69,13 +79,13 @@ def _parse_pdf_to_images(pdf_path: str, output_dir: str = './output') -> List[Tu
         scores_ = []
         class_names_ = []
         for i, (class_name, box, score) in enumerate(zip(class_names, boxes, scores)):
-            if class_name == 'figure' or class_name == 'table':
+            if class_name == "figure" or class_name == "table":
                 boxes_.append(box)
                 scores_.append(score)
-                class_name = f'{page_index}_{i}.png'
+                class_name = f"{page_index}_{i}.png"
                 class_names_.append(class_name)
-                
-        page_image = os.path.join(output_dir, f'{page_index}.png')
+
+        page_image = os.path.join(output_dir, f"{page_index}.png")
         pix = np.array(pix)
         pix = cv2.cvtColor(pix, cv2.COLOR_RGB2BGR)
         print(boxes_, scores_, class_names_)
@@ -89,64 +99,64 @@ def _parse_pdf_to_images(pdf_path: str, output_dir: str = './output') -> List[Tu
 
 
 def _gpt_parse_images(
-        image_infos: List[Tuple[str, List[str]]],
-        prompt_dict: Optional[Dict] = None,
-        output_dir: str = './',
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        # model: str = 'gpt-4o',
-        verbose: bool = False,
-        gpt_worker: int = 1,
-        **args
+    image_infos: List[Tuple[str, List[str]]],
+    prompt_dict: Optional[Dict] = None,
+    output_dir: str = "./",
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    # model: str = 'gpt-4o',
+    verbose: bool = False,
+    gpt_worker: int = 1,
+    **args,
 ) -> str:
     """
     Parse images to markdown content.
     """
 
-    if isinstance(prompt_dict, dict) and 'prompt' in prompt_dict:
-        prompt = prompt_dict['prompt']
+    if isinstance(prompt_dict, dict) and "prompt" in prompt_dict:
+        prompt = prompt_dict["prompt"]
         logging.info("prompt is provided, using user prompt.")
     else:
         prompt = DEFAULT_PROMPT
         logging.info("prompt is not provided, using default prompt.")
-    if isinstance(prompt_dict, dict) and 'rect_prompt' in prompt_dict:
-        rect_prompt = prompt_dict['rect_prompt']
+    if isinstance(prompt_dict, dict) and "rect_prompt" in prompt_dict:
+        rect_prompt = prompt_dict["rect_prompt"]
         logging.info("rect_prompt is provided, using user prompt.")
     else:
         rect_prompt = DEFAULT_RECT_PROMPT
         logging.info("rect_prompt is not provided, using default prompt.")
-    if isinstance(prompt_dict, dict) and 'role_prompt' in prompt_dict:
-        role_prompt = prompt_dict['role_prompt']
+    if isinstance(prompt_dict, dict) and "role_prompt" in prompt_dict:
+        role_prompt = prompt_dict["role_prompt"]
         logging.info("role_prompt is provided, using user prompt.")
     else:
         role_prompt = DEFAULT_ROLE_PROMPT
         logging.info("role_prompt is not provided, using default prompt.")
 
     def _process_page(index: int, image_info: Tuple[str, List[str]]) -> Tuple[int, str]:
-        logging.info(f'gpt parse page: {index}')
+        logging.info(f"gpt parse page: {index}")
 
         # agent = Agent(role=role_prompt, api_key=api_key, base_url=base_url, disable_python_run=True, model=model, **args)
         page_image, rect_images = image_info
         local_prompt = prompt
         local_prompt = role_prompt + local_prompt
         if rect_images:
-            local_prompt += rect_prompt + ', '.join(rect_images)
+            local_prompt += rect_prompt + ", ".join(rect_images)
         # content = agent.run([local_prompt, {'image': page_image}], display=verbose)
         messages = [
-    {
-        "role": "user",
-        "content": [
             {
-                "type": "image",
-                "image": page_image,
-            },
-            {"type": "text", "text": local_prompt},
-        ],
-    }
-]
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "image": page_image,
+                    },
+                    {"type": "text", "text": local_prompt},
+                ],
+            }
+        ]
         text = processor.apply_chat_template(
-    messages, tokenize=False, add_generation_prompt=True
-)
+            messages, tokenize=False, add_generation_prompt=True
+        )
         print(text)
         image_inputs, video_inputs = process_vision_info(messages)
         inputs = processor(
@@ -161,47 +171,55 @@ def _gpt_parse_images(
         # Inference: Generation of the output
         generated_ids = model.generate(**inputs, max_new_tokens=2000, num_beams=1)
         generated_ids_trimmed = [
-            out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+            out_ids[len(in_ids) :]
+            for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
         ]
         output_text = processor.batch_decode(
-            generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+            generated_ids_trimmed,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
         )
         return index, output_text
 
     contents = [None] * len(image_infos)
     with concurrent.futures.ThreadPoolExecutor(max_workers=gpt_worker) as executor:
-        futures = [executor.submit(_process_page, index, image_info) for index, image_info in enumerate(image_infos)]
+        futures = [
+            executor.submit(_process_page, index, image_info)
+            for index, image_info in enumerate(image_infos)
+        ]
         for future in concurrent.futures.as_completed(futures):
             index, content = future.result()
             content = content[0]
             print(content)
 
             # 在某些情况下大模型还是会输出 ```markdown ```字符串
-            if '```markdown' in content:
-                content = content.replace('```markdown\n', '')
-                last_backticks_pos = content.rfind('```')
+            if "```markdown" in content:
+                content = content.replace("```markdown\n", "")
+                last_backticks_pos = content.rfind("```")
                 if last_backticks_pos != -1:
-                    content = content[:last_backticks_pos] + content[last_backticks_pos + 3:]
+                    content = (
+                        content[:last_backticks_pos] + content[last_backticks_pos + 3 :]
+                    )
 
             contents[index] = content
 
-    output_path = os.path.join(output_dir, 'output.md')
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write('\n\n'.join(contents))
+    output_path = os.path.join(output_dir, "output.md")
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n\n".join(contents))
 
-    return '\n\n'.join(contents)
+    return "\n\n".join(contents)
 
 
 def parse_pdf(
-        pdf_path: str,
-        output_dir: str = './',
-        prompt: Optional[Dict] = None,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: str = 'gpt-4o',
-        verbose: bool = False,
-        gpt_worker: int = 1,
-        **args
+    pdf_path: str,
+    output_dir: str = "./",
+    prompt: Optional[Dict] = None,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    model: str = "gpt-4o",
+    verbose: bool = False,
+    gpt_worker: int = 1,
+    **args,
 ) -> Tuple[str, List[str]]:
     """
     Parse a PDF file to a markdown file.
@@ -220,7 +238,7 @@ def parse_pdf(
         model=model,
         verbose=verbose,
         gpt_worker=gpt_worker,
-        **args
+        **args,
     )
 
     all_rect_images = []
@@ -234,8 +252,8 @@ def parse_pdf(
 
 
 result = parse_pdf(
-    pdf_path='/home/user/wyf/test.pdf',
+    pdf_path="/home/user/wyf/test.pdf",
     output_dir="./output",
     verbose=True,
-    gpt_worker=1
+    gpt_worker=1,
 )
